@@ -3,6 +3,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
+const authRoutes = require("./routes/auth");
 
 // Load environment variables
 dotenv.config();
@@ -15,10 +16,8 @@ const app = express();
 // Middleware to parse JSON
 app.use(express.json());
 
-// Define a simple route
-app.get("/", (req, res) => {
-  res.send("Welcome to TypeSprint API");
-});
+// Define routes
+app.use("/api/auth", authRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5000;
