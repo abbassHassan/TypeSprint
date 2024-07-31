@@ -1,10 +1,5 @@
-// controllers/typingTestController.js
-
 const TypingTest = require("../models/TypingTest");
 
-// @desc    Record a new typing test result
-// @route   POST /api/typing-tests
-// @access  Private
 exports.recordTypingTest = async (req, res) => {
   const { wpm, accuracy } = req.body;
 
@@ -23,9 +18,6 @@ exports.recordTypingTest = async (req, res) => {
   }
 };
 
-// @desc    Get all typing test results for a user
-// @route   GET /api/typing-tests
-// @access  Private
 exports.getTypingTests = async (req, res) => {
   try {
     const tests = await TypingTest.find({ user: req.user.id }).sort({

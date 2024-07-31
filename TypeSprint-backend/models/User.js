@@ -1,5 +1,3 @@
-// models/User.js
-
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -20,7 +18,6 @@ const UserSchema = new mongoose.Schema({
   },
 });
 
-// Encrypt password before saving user
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     next();

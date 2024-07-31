@@ -1,5 +1,3 @@
-// models/TypingTest.js
-
 const mongoose = require("mongoose");
 
 const TypingTestSchema = new mongoose.Schema({
