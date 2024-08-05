@@ -1,21 +1,30 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
+const cors = require("cors");
+
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/user");
 const typingTestRoutes = require("./routes/typingTest");
+const textSampleRoutes = require("./routes/textSample");
 
-dotenv.config();
-
+const x = dotenv.config();
+console.log(x);
 connectDB();
 
 const app = express();
 
+console.log("Environment Variables Loaded:"); // Log all environment variables
+
+app.use(cors()); // You can specify specific origins by passing an options object, e.g., { origin: 'http://localhost:3000' }
+
 app.use(express.json());
 
+// Define routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/typing-tests", typingTestRoutes);
+app.use("/api/text-samples", textSampleRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
