@@ -1,5 +1,3 @@
-// src/pages/Login.js
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -14,6 +12,7 @@ const Login = () => {
     setError("");
 
     try {
+      console.log("Sending login request with:", { email, password });
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: {
@@ -23,11 +22,11 @@ const Login = () => {
       });
 
       const data = await response.json();
-      if (response.ok) {
-        // Store the JWT token (if any) in local storage or state
-        localStorage.setItem("token", data.token); // Example storage
+      console.log("Response received:", data);
 
-        // Redirect to the home page after successful login
+      if (response.ok) {
+        // Handle successful login
+        localStorage.setItem("token", data.token);
         navigate("/");
       } else {
         setError(
