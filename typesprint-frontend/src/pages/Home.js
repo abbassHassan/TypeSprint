@@ -9,7 +9,7 @@ const Home = () => {
   const [error, setError] = useState(null); // Handle errors
   const [result, setResult] = useState(null); // Store typing test result
   const [timeLeft, setTimeLeft] = useState(60); // Initial time of 60 seconds
-  const timerRef = useRef(null); // Use ref to store the timer ID
+  const timerRef = useRef(null);
   const navigate = useNavigate();
 
   const handleSubmit = useCallback(async () => {
@@ -55,6 +55,7 @@ const Home = () => {
     }
   }, [startTime, textSampleId, typedText, navigate]);
 
+  // Fetch text sample on component mount
   useEffect(() => {
     const fetchTextSample = async () => {
       try {
@@ -73,6 +74,7 @@ const Home = () => {
     fetchTextSample();
   }, []);
 
+  // Timer logic
   useEffect(() => {
     if (timeLeft > 0 && startTime) {
       timerRef.current = setInterval(() => {
@@ -80,23 +82,27 @@ const Home = () => {
       }, 1000);
 
       return () => clearInterval(timerRef.current);
-    } else if (timeLeft <= 0) {
-      clearInterval(timerRef.current);
-      handleSubmit();
+    } else if (timeLeft === 0) {
+      handleSubmit(); // Submit results when time runs out
     }
-  }, [timeLeft, startTime, handleSubmit]);
+  }, [timeLeft, startTime, handleSubmit]); // Now handleSubmit is included in the dependency array
 
+  // Handle text input
   const handleChange = (e) => {
     if (!startTime) {
-      setStartTime(new Date());
+      setStartTime(new Date()); // Set the start time when typing starts
+      if (!timerRef.current) {
+        timerRef.current = setInterval(() => {
+          setTimeLeft((prevTime) => prevTime - 1);
+        }, 1000); // Start the timer when typing starts
+      }
     }
     setTypedText(e.target.value);
   };
 
+  // Handle logout
   const handleLogout = () => {
-    // Clear the token from local storage
     localStorage.removeItem("token");
-    // Navigate to the login page
     navigate("/login");
   };
 
