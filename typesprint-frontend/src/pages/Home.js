@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Home = () => {
@@ -8,11 +8,55 @@ const Home = () => {
   const [startTime, setStartTime] = useState(null);
   const [error, setError] = useState(null); // Handle errors
   const [result, setResult] = useState(null); // Store typing test result
-  const [timeLeft, setTimeLeft] = useState(60); // Initial time of 60 seconds
-  const timerRef = useRef(null);
+  const [timeLeft, setTimeLeft] = useState(30); // Initial time of 30 seconds
   const navigate = useNavigate();
 
-  const handleSubmit = useCallback(async () => {
+  const timerRef = useRef(null);
+
+  // Fetch text sample on component mount
+  useEffect(() => {
+    const fetchTextSample = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/text-samples/random"
+        );
+        const data = await response.json();
+        setTextSample(data.content);
+        setTextSampleId(data._id); // Store the text sample ID
+      } catch (err) {
+        console.error("Error fetching text sample:", err);
+        setError("Failed to fetch text sample. Please try again later.");
+      }
+    };
+
+    fetchTextSample();
+  }, []);
+
+  // Timer logic
+  useEffect(() => {
+    if (timeLeft > 0 && startTime) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      clearInterval(timerRef.current);
+      handleSubmit(); // Submit results when time runs out
+    }
+
+    return () => clearInterval(timerRef.current);
+  }, [timeLeft, startTime]);
+
+  // Handle text input
+  const handleChange = (e) => {
+    if (!startTime) {
+      setStartTime(new Date());
+      setTimeLeft(30); // Reset timer to 30 seconds when the user starts typing
+    }
+    setTypedText(e.target.value);
+  };
+
+  // Submit typing test results
+  const handleSubmit = async () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -53,57 +97,29 @@ const Home = () => {
       console.error("Submission error:", err);
       setError("Failed to submit typing test. Please try again later.");
     }
-  }, [startTime, textSampleId, typedText, navigate]);
-
-  // Fetch text sample on component mount
-  useEffect(() => {
-    const fetchTextSample = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:5000/api/text-samples/random"
-        );
-        const data = await response.json();
-        setTextSample(data.content);
-        setTextSampleId(data._id); // Store the text sample ID
-      } catch (err) {
-        console.error("Error fetching text sample:", err);
-        setError("Failed to fetch text sample. Please try again later.");
-      }
-    };
-
-    fetchTextSample();
-  }, []);
-
-  // Timer logic
-  useEffect(() => {
-    if (timeLeft > 0 && startTime) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prevTime) => prevTime - 1);
-      }, 1000);
-
-      return () => clearInterval(timerRef.current);
-    } else if (timeLeft === 0) {
-      handleSubmit(); // Submit results when time runs out
-    }
-  }, [timeLeft, startTime, handleSubmit]); // Now handleSubmit is included in the dependency array
-
-  // Handle text input
-  const handleChange = (e) => {
-    if (!startTime) {
-      setStartTime(new Date()); // Set the start time when typing starts
-      if (!timerRef.current) {
-        timerRef.current = setInterval(() => {
-          setTimeLeft((prevTime) => prevTime - 1);
-        }, 1000); // Start the timer when typing starts
-      }
-    }
-    setTypedText(e.target.value);
   };
 
   // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/login");
+  };
+
+  // Render text with color-coding based on correctness
+  const renderTextWithColor = () => {
+    return textSample.split("").map((char, index) => {
+      let color;
+      if (index < typedText.length) {
+        color = typedText[index] === char ? "text-black" : "text-red-500";
+      } else {
+        color = "text-gray-500";
+      }
+      return (
+        <span key={index} className={color}>
+          {char}
+        </span>
+      );
+    });
   };
 
   return (
@@ -120,7 +136,7 @@ const Home = () => {
         </div>
       </header>
       <main className="flex-grow container mx-auto p-4">
-        <div className="bg-white shadow-md rounded-lg p-6 mt-8">
+        <div className="relative bg-white shadow-md rounded-lg p-6 mt-8">
           <h2 className="text-3xl font-bold text-center mb-6">Typing Test</h2>
           {error && (
             <div className="mb-4 p-2 bg-red-200 text-red-800 rounded">
@@ -139,21 +155,37 @@ const Home = () => {
             </div>
           ) : (
             <>
-              <div className="mb-4 p-4 bg-gray-200 rounded-lg">
-                <p className="text-lg font-mono">{textSample}</p>
+              <div className="relative mb-4 p-4 bg-gray-200 rounded-lg h-32">
+                <div
+                  className="absolute top-0 left-0 w-full h-full text-lg font-mono leading-relaxed pointer-events-none whitespace-pre-wrap"
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "16px",
+                    lineHeight: "1.5",
+                    letterSpacing: "normal", // Ensure spacing matches the textarea
+                  }}
+                >
+                  {renderTextWithColor()}
+                </div>
+                <textarea
+                  className="w-full h-full p-0 border-none outline-none bg-transparent text-transparent caret-black absolute top-0 left-0"
+                  value={typedText}
+                  onChange={handleChange}
+                  disabled={timeLeft <= 0} // Disable textarea when time is up
+                  spellCheck="false" // Disable spellcheck to avoid red underlines
+                  style={{
+                    fontFamily: "monospace",
+                    fontSize: "16px",
+                    lineHeight: "1.5",
+                    letterSpacing: "normal", // Ensure spacing matches the rendered text
+                    caretColor: "black", // Ensure caret is visible
+                  }}
+                ></textarea>
               </div>
               <div className="text-center mb-4">
                 <span className="text-2xl font-bold">{timeLeft}</span> seconds
                 remaining
               </div>
-              <textarea
-                className="w-full p-4 border border-gray-300 rounded-lg mb-4"
-                rows="5"
-                placeholder="Start typing here..."
-                value={typedText}
-                onChange={handleChange}
-                disabled={timeLeft <= 0} // Disable textarea when time is up
-              ></textarea>
             </>
           )}
         </div>
