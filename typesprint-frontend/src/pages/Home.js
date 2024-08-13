@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Home = () => {
@@ -8,7 +8,52 @@ const Home = () => {
   const [startTime, setStartTime] = useState(null);
   const [error, setError] = useState(null); // Handle errors
   const [result, setResult] = useState(null); // Store typing test result
+  const [timeLeft, setTimeLeft] = useState(60); // Initial time of 60 seconds
+  const timerRef = useRef(null); // Use ref to store the timer ID
   const navigate = useNavigate();
+
+  const handleSubmit = useCallback(async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("Token is missing. Please log in again.");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/api/typing-tests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-auth-token": token, // Use actual JWT token from local storage
+        },
+        body: JSON.stringify({
+          textSampleId, // Use the actual text sample ID
+          startTime,
+          typedContent: typedText,
+        }),
+      });
+
+      if (response.status === 401) {
+        setError("Token is not valid. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      setResult(data); // Store the result
+      console.log(data);
+    } catch (err) {
+      console.error("Submission error:", err);
+      setError("Failed to submit typing test. Please try again later.");
+    }
+  }, [startTime, textSampleId, typedText, navigate]);
 
   useEffect(() => {
     const fetchTextSample = async () => {
@@ -28,44 +73,24 @@ const Home = () => {
     fetchTextSample();
   }, []);
 
+  useEffect(() => {
+    if (timeLeft > 0 && startTime) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
+
+      return () => clearInterval(timerRef.current);
+    } else if (timeLeft <= 0) {
+      clearInterval(timerRef.current);
+      handleSubmit();
+    }
+  }, [timeLeft, startTime, handleSubmit]);
+
   const handleChange = (e) => {
     if (!startTime) {
       setStartTime(new Date());
     }
     setTypedText(e.target.value);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const currentTime = new Date();
-
-    try {
-      const response = await fetch("http://localhost:5000/api/typing-tests", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-auth-token": localStorage.getItem("token"), // Use actual JWT token from local storage
-        },
-        body: JSON.stringify({
-          textSampleId, // Use the actual text sample ID
-          startTime,
-          endTime: currentTime, // Use current time for end time
-          typedContent: typedText,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      const data = await response.json();
-      setResult(data); // Store the result
-      console.log(data);
-      // Handle the response, like showing results
-    } catch (err) {
-      console.error("Submission error:", err);
-      setError("Failed to submit typing test. Please try again later.");
-    }
   };
 
   const handleLogout = () => {
@@ -111,21 +136,18 @@ const Home = () => {
               <div className="mb-4 p-4 bg-gray-200 rounded-lg">
                 <p className="text-lg font-mono">{textSample}</p>
               </div>
-              <form onSubmit={handleSubmit}>
-                <textarea
-                  className="w-full p-4 border border-gray-300 rounded-lg mb-4"
-                  rows="5"
-                  placeholder="Start typing here..."
-                  value={typedText}
-                  onChange={handleChange}
-                ></textarea>
-                <button
-                  type="submit"
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
-                >
-                  Submit
-                </button>
-              </form>
+              <div className="text-center mb-4">
+                <span className="text-2xl font-bold">{timeLeft}</span> seconds
+                remaining
+              </div>
+              <textarea
+                className="w-full p-4 border border-gray-300 rounded-lg mb-4"
+                rows="5"
+                placeholder="Start typing here..."
+                value={typedText}
+                onChange={handleChange}
+                disabled={timeLeft <= 0} // Disable textarea when time is up
+              ></textarea>
             </>
           )}
         </div>
