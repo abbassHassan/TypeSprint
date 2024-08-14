@@ -48,11 +48,17 @@ const Home = () => {
 
   // Handle text input
   const handleChange = (e) => {
+    const input = e.target.value;
+
+    // Limit the length of typed text to the length of the sample text
+    if (input.length <= textSample.length) {
+      setTypedText(input);
+    }
+
     if (!startTime) {
       setStartTime(new Date());
       setTimeLeft(30); // Reset timer to 30 seconds when the user starts typing
     }
-    setTypedText(e.target.value);
   };
 
   // Submit typing test results
@@ -168,17 +174,20 @@ const Home = () => {
                   {renderTextWithColor()}
                 </div>
                 <textarea
-                  className="w-full h-full p-0 border-none outline-none bg-transparent text-transparent caret-black absolute top-0 left-0"
+                  className="w-full h-full p-0 border-none outline-none bg-transparent text-transparent caret-transparent absolute top-0 left-0"
                   value={typedText}
                   onChange={handleChange}
                   disabled={timeLeft <= 0} // Disable textarea when time is up
                   spellCheck="false" // Disable spellcheck to avoid red underlines
+                  wrap="off" // Ensure no wrapping occurs within the textarea
                   style={{
                     fontFamily: "monospace",
                     fontSize: "16px",
                     lineHeight: "1.5",
                     letterSpacing: "normal", // Ensure spacing matches the rendered text
-                    caretColor: "black", // Ensure caret is visible
+                    caretColor: "transparent", // Hide the caret
+                    overflowWrap: "break-word", // Break words correctly
+                    whiteSpace: "pre-wrap", // Maintain the correct white space handling
                   }}
                 ></textarea>
               </div>

@@ -19,7 +19,7 @@ exports.recordTypingTest = async (req, res) => {
 
     // Calculate WPM (Words Per Minute)
     const wordsTyped = typedContent.split(" ").length;
-    const wpm = wordsTyped / timeTakenMinutes;
+    const rawWPM = wordsTyped / timeTakenMinutes;
 
     // Calculate accuracy
     const originalContent = textSample.content.slice(0, typedContent.length);
@@ -31,33 +31,21 @@ exports.recordTypingTest = async (req, res) => {
     }
     const accuracy = (correctChars / typedContent.length) * 100;
 
+    // Adjust WPM by accuracy
+    const adjustedWPM = rawWPM * (accuracy / 100);
+
     // Create new typing test record
     const typingTest = new TypingTest({
       user: req.user.id,
       textSample: textSampleId,
       startTime: new Date(startTime),
       endTime: new Date(), // Current time as endTime
-      wpm,
+      wpm: adjustedWPM,
       accuracy,
     });
 
     const savedTest = await typingTest.save();
     res.json(savedTest);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
-  }
-};
-
-// @desc    Get all typing tests for a user
-// @route   GET /api/typing-tests
-// @access  Private
-exports.getTypingTests = async (req, res) => {
-  try {
-    const tests = await TypingTest.find({ user: req.user.id })
-      .sort({ date: -1 })
-      .populate("textSample", "content");
-    res.json(tests);
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server error");
